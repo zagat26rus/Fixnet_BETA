@@ -319,6 +319,84 @@ function useIsMobile() {
   return isMobile;
 }
 
+/* ===== Новое полноэкранное меню ===== */
+const FullScreenMenu: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  items: Array<{ label: string; onClick: () => void }>;
+  currentTab: string;
+}> = ({ open, onClose, items, currentTab }) => {
+  if (!open) return null;
+
+  return (
+    <div className="fx-overlayPane fixed inset-0 z-[2000]">
+      {/* Затемненный фон */}
+      <div 
+        className="absolute inset-0 bg-black/90 backdrop-blur-sm" 
+        onClick={onClose} 
+      />
+      
+      {/* Контент меню */}
+      <div className="absolute inset-0 flex flex-col">
+        {/* Хедер меню */}
+        <div className="flex items-center justify-between p-6 border-b border-zinc-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-yellow-400 grid place-items-center text-black font-black text-lg">
+              F
+            </div>
+            <div className="text-left">
+              <div className="text-xl font-bold text-white">FixNet</div>
+              <div className="text-sm text-zinc-400">Когда важно, чтобы работало</div>
+            </div>
+          </div>
+          
+          {/* Кнопка закрытия */}
+          <button
+            onClick={onClose}
+            className="w-10 h-10 rounded-xl border border-zinc-700 flex items-center justify-center hover:border-zinc-500 transition-colors"
+            aria-label="Закрыть меню"
+          >
+            <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Навигация */}
+        <nav className="flex-1 p-6 space-y-3">
+          {items.map((item) => (
+            <button
+              key={item.label}
+              onClick={() => {
+                item.onClick();
+                onClose();
+              }}
+              className={classNames(
+                "w-full text-left px-4 py-4 rounded-2xl border-2 transition-all duration-200 text-lg font-medium",
+                currentTab === item.label
+                  ? "bg-yellow-400 text-black border-yellow-400 shadow-lg"
+                  : "border-zinc-800 bg-zinc-900/80 text-white hover:border-zinc-600 hover:bg-zinc-800/50"
+              )}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        {/* Футер меню */}
+        <div className="p-6 border-t border-zinc-800">
+          <div className="flex items-center gap-3 text-zinc-400">
+            <div className="px-3 py-2 rounded-xl border border-zinc-700 text-sm">
+              ₽ RUB
+            </div>
+            <div className="text-sm">© 2025 FixNet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const BottomSheet: React.FC<{
   open: boolean;
   onClose: () => void;
@@ -393,6 +471,7 @@ const Modal: React.FC<{
 };
 
 /* ===== MapPicker ===== */
+/* ===== MapPicker ===== */
 function MapPicker({
   centers,
   selectedId,
@@ -412,6 +491,8 @@ function MapPicker({
 }) {
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  
   const centersSorted = useMemo(() => {
     if (!userPos) return centers;
     return [...centers].sort((a, b) => {
@@ -420,6 +501,18 @@ function MapPicker({
       return da - db;
     });
   }, [userPos, centers]);
+
+  // Управляем z-index карты когда открыта шторка
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    
+    if (sheetOpen) {
+      mapContainerRef.current.classList.add('map-disabled');
+    } else {
+      mapContainerRef.current.classList.remove('map-disabled');
+    }
+  }, [sheetOpen]);
+
   const renderList = () => (
     <div className="space-y-2">
       {centersSorted.map((s) => {
@@ -456,9 +549,10 @@ function MapPicker({
       })}
     </div>
   );
+
   return (
     <div className="grid md:grid-cols-3 gap-4">
-      <div className="md:col-span-2">
+      <div className="md:col-span-2" ref={mapContainerRef}>
         <MapView
           points={centers}
           selectedId={selectedId}
@@ -466,6 +560,7 @@ function MapPicker({
           userPos={userPos ?? undefined}
         />
       </div>
+      
       {!isMobile ? (
         <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-3">
           <div className="text-sm font-medium mb-2">Сервисы поблизости</div>
@@ -475,17 +570,33 @@ function MapPicker({
         <div className="md:hidden">
           <button
             onClick={() => setSheetOpen(true)}
-            className="w-full px-4 py-3 rounded-xl border border-zinc-700 hover:border-zinc-500"
+            className="w-full px-4 py-3 rounded-xl border border-zinc-700 hover:border-zinc-500 bg-zinc-900/80 backdrop-blur"
           >
             Сервисы поблизости
           </button>
-          <BottomSheet
-            open={sheetOpen}
-            onClose={() => setSheetOpen(false)}
-            title="Сервисы поблизости"
-          >
-            {renderList()}
-          </BottomSheet>
+          
+          {/* Обновленная BottomSheet с правильным z-index */}
+          {sheetOpen && (
+            <div className="fixed inset-0 z-[2000]">
+              <div 
+                className="absolute inset-0 bg-black/80" 
+                onClick={() => setSheetOpen(false)} 
+              />
+              <div className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-zinc-950 border-t border-zinc-800 p-4 max-h-[75vh] overflow-auto shadow-2xl">
+                <div className="mx-auto h-1.5 w-12 rounded-full bg-zinc-700 mb-3" />
+                <div className="text-sm font-medium mb-2">Сервисы поблизости</div>
+                {renderList()}
+                <div className="mt-3">
+                  <button
+                    onClick={() => setSheetOpen(false)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-700 hover:border-zinc-500"
+                  >
+                    Закрыть
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -494,41 +605,54 @@ function MapPicker({
 
 /* ===== App ===== */
 export default function App() {
-  const [tab, setTab] = useState<
-    "Ремонт" | "Отслеживание" | "Поддержка"
-  >("Ремонт");
+  const [tab, setTab] = useState<"Ремонт"|"Отслеживание"|"Поддержка">("Ремонт");
   const [mobileOpen, setMobileOpen] = useState(false);
   const mouse = useMouseLight();
 
   const goHome = () => {
     setTab("Ремонт");
     setMobileOpen(false);
-    try {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch {}
+    try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch {}
   };
+
+  // Esc закрывает меню
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMobileOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileOpen]);
+
+  // Блокируем скролл body
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [mobileOpen]);
 
   const Nav = (
     <>
       {["Ремонт", "Отслеживание", "Поддержка"].map((t) => (
         <button
           key={t}
-          onClick={() => {
-            setTab(t as any);
-            setMobileOpen(false);
-          }}
-          className={classNames(
-            "px-3 py-2 rounded-xl text-sm border transition whitespace-nowrap",
-            tab === t
-              ? "bg-yellow-400 text-black border-yellow-400"
-              : "border-zinc-800 hover:border-zinc-600"
-          )}
+          onClick={() => { setTab(t as any); setMobileOpen(false); }}
+          className={
+            "px-3 py-2 rounded-xl text-sm border transition whitespace-nowrap " +
+            (tab === t ? "bg-yellow-400 text-black border-yellow-400" : "border-zinc-800 hover:border-zinc-600")
+          }
         >
           {t}
         </button>
       ))}
     </>
   );
+
+  const menuItems = [
+    { label: "Ремонт", onClick: () => setTab("Ремонт") },
+    { label: "Отслеживание", onClick: () => setTab("Отслеживание") },
+    { label: "Поддержка", onClick: () => setTab("Поддержка") },
+  ];
 
   return (
     <ErrorBoundary>
@@ -540,69 +664,43 @@ export default function App() {
       >
         <header className="sticky top-0 z-40 backdrop-blur bg-black/30 border-b border-zinc-800">
           <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
-            {/* ЛОГО-БЛОК -> кликабелен, возвращает на главную */}
-            <button
-              onClick={goHome}
-              className="flex items-center gap-2 select-none group"
-              aria-label="На главную"
-            >
-              <div className="w-8 h-8 rounded-xl bg-yellow-400 grid place-items-center text-black font-black group-active:scale-95 transition">
-                F
-              </div>
+            <button onClick={goHome} className="flex items-center gap-2 select-none group" aria-label="На главную">
+              <div className="w-8 h-8 rounded-xl bg-yellow-400 grid place-items-center text-black font-black group-active:scale-95 transition">F</div>
               <div className="text-left">
                 <div className="text-lg font-semibold">FixNet</div>
-                <div className="text-sm text-zinc-400">
-                  Когда важно, чтобы работало
-                </div>
+                <div className="text-sm text-zinc-400">Когда важно, чтобы работало</div>
               </div>
             </button>
 
-            {/* Десктоп-навигация */}
-            <nav className="ml-6 gap-2 overflow-x-auto hidden md:flex">
-              {Nav}
-            </nav>
+            <nav className="ml-6 gap-2 overflow-x-auto hidden md:flex">{Nav}</nav>
 
-            {/* Валюта (RU-only) */}
             <div className="ml-auto hidden md:flex items-center gap-2">
-              <div className="px-3 py-2 rounded-xl border border-zinc-700 text-sm">
-                ₽ RUB
-              </div>
+              <div className="px-3 py-2 rounded-xl border border-zinc-700 text-sm">₽ RUB</div>
             </div>
 
-            {/* Бургер */}
+            {/* Новый бургер */}
             <button
-              className="ml-auto md:hidden p-2 rounded-xl border border-zinc-700"
-              onClick={() => setMobileOpen((v) => !v)}
-              aria-label="menu"
+              className="ml-auto md:hidden p-2 rounded-xl border border-zinc-700 hover:border-zinc-500 transition-colors"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Открыть меню"
             >
-              <div className="w-5 h-0.5 bg-white mb-1"></div>
-              <div className="w-5 h-0.5 bg-white mb-1"></div>
-              <div className="w-5 h-0.5 bg-white"></div>
+              <div className="w-6 h-0.5 bg-white mb-1.5 transition-transform"></div>
+              <div className="w-6 h-0.5 bg-white mb-1.5 transition-transform"></div>
+              <div className="w-6 h-0.5 bg-white transition-transform"></div>
             </button>
           </div>
-
-          {/* МОБИЛЬНОЕ МЕНЮ — ПОВЕРХ страницы через оверлей */}
-          {mobileOpen && (
-            <div className="md:hidden fixed inset-0 z-50">
-              <div
-                className="absolute inset-0 bg-black/60"
-                onClick={() => setMobileOpen(false)}
-              />
-              <div className="absolute right-0 top-0 h-full w-72 max-w-[85vw] bg-zinc-950 border-l border-zinc-800 shadow-2xl p-4 flex flex-col gap-2">
-                <div className="mb-2 text-sm text-zinc-400">Меню</div>
-                {Nav}
-                <div className="px-3 py-2 rounded-xl border border-zinc-700 text-sm mt-2 self-start">
-                  ₽ RUB
-                </div>
-              </div>
-            </div>
-          )}
         </header>
 
+        {/* Новое полноэкранное меню */}
+        <FullScreenMenu
+          open={mobileOpen}
+          onClose={() => setMobileOpen(false)}
+          items={menuItems}
+          currentTab={tab}
+        />
+
         <main className="max-w-6xl mx-auto p-4 grid md:grid-cols-3 gap-4">
-          {tab === "Ремонт" && (
-            <Repair onOrder={(id) => alert(`Заявка #${id} создана`)} />
-          )}
+          {tab === "Ремонт" && (<Repair onOrder={(id) => alert(`Заявка #${id} создана`)} />)}
           {tab === "Отслеживание" && <Tracking />}
           {tab === "Поддержка" && <Support />}
         </main>

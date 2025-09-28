@@ -1,0 +1,108 @@
+/* Overlay container */
+.applemenu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  pointer-events: none; /* включим только когда open */
+}
+
+/* BACKDROP: светлый размытный слой (как у apple) */
+.applemenu-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  opacity: 0;
+  transition: opacity 320ms ease;
+}
+
+/* SHEET: сама панель со ссылками */
+.applemenu-sheet {
+  position: absolute;
+  inset: 0;
+  margin: 16px;              /* визуальный отступ от краёв, как карточка */
+  background: rgba(255, 255, 255, 0.92);
+  color: #0a0a0a;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.25);
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 320ms ease, transform 320ms ease;
+  pointer-events: auto; /* кликабельно */
+}
+
+/* Close button */
+.applemenu-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,.08);
+  background: rgba(255,255,255,.9);
+  color: #111;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* Nav */
+.applemenu-nav {
+  padding: 48px 28px 16px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.applemenu-link {
+  font-size: 28px;
+  line-height: 1.2;
+  text-decoration: none;
+  color: #111;
+  font-weight: 600;
+  padding: 6px 4px;
+  border-radius: 8px;
+  outline: none;
+}
+
+.applemenu-link:hover, .applemenu-link:focus {
+  background: rgba(0,0,0,.04);
+}
+
+/* Footer (валюта/копирайт/кнопки) */
+.applemenu-footer {
+  margin-top: auto;
+  padding: 12px 20px 20px 20px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: rgba(0,0,0,.6);
+  font-size: 12px;
+}
+
+/* OPEN state */
+.applemenu-open .applemenu-backdrop { opacity: 1; }
+.applemenu-open .applemenu-sheet { opacity: 1; transform: translateY(0); }
+
+/* Desktop: скрываем вовсе */
+@media (min-width: 1024px) {
+  .applemenu-overlay { display: none; }
+}
+
+/* =========================
+   FIX: карта не перекрывает список
+   ========================= */
+.centers-section{ position:relative; isolation:isolate; }
+.map-card{ position:relative; z-index:0; overflow:hidden; border-radius:16px; }
+
+/* Прибиваем внутренние слои популярных карт */
+.leaflet-container,
+.mapboxgl-map,
+.ymaps-2-1-79-map,
+.ymaps-2-1-79-inner-panes{ z-index:0 !important; }
+
+.service-list{ position:relative; z-index:2; }

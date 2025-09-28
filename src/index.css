@@ -1,0 +1,25 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+body { background: #0b0e14; }
+.leaflet-control-attribution,
+.leaflet-control-container .leaflet-control {
+  display: none !important;
+}
+/* --- Leaflet & overlays z-index fixes --- */
+
+/* сама карта ниже всех модалок/шторок */
+.leaflet-container { z-index: 0 !important; }
+
+/* если открыта шторка/модал — добавляй на карту этот класс */
+.map-disabled { pointer-events: none !important; }
+
+/* универсальные уровни перекрытия для наших оверлеев */
+.fx-overlay     { position: fixed; inset: 0; z-index: 1000; } /* затемнение */
+.fx-overlayPane { position: fixed; inset: 0; z-index: 1001; } /* контент шторки/модала */
+
+/* если у тебя есть контейнер с листом выбора сервисов — дайте ему всегда высокий z */
+.fx-bottomSheet { z-index: 1001 !important; position: fixed; left: 0; right: 0; bottom: 0; }
